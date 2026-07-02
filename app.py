@@ -911,6 +911,29 @@ st.markdown('''
         background: rgba(108,92,231,0.08); border-color: rgba(108,92,231,0.4);
         animation: subtleGlow 3s ease-in-out infinite;
     }
+
+    /* ===== RESPONSIVE: MOBILE ===== */
+    @media (max-width: 768px) {
+        .main-title { font-size: 1.8em !important; }
+        .sub-title { font-size: 0.85em !important; margin-bottom: 1.5em !important; }
+        .section-header { font-size: 0.95em !important; }
+        .plan-box { padding: 16px !important; }
+        .stButton button { font-size: 0.82rem !important; }
+        button[kind="primary"] { font-size: 0.85rem !important; }
+        .pos-card { padding: 14px !important; }
+        .chat-bubble-user, .chat-bubble-ai { font-size: 0.85em !important; }
+        .stExpander { font-size: 0.85em !important; }
+        section[data-testid="stSidebar"] { min-width: 260px !important; }
+        footer { display: none !important; }
+    }
+    @media (max-width: 480px) {
+        .main-title { font-size: 1.4em !important; }
+        section[data-testid="stSidebar"] { width: 100vw !important; }
+        .stTabs [data-baseweb="tab"] { font-size: 0.78em !important; padding: 6px 10px !important; }
+        .stRadio label { font-size: 0.82em !important; }
+        .stTextInput input, .stTextArea textarea { font-size: 16px !important; }
+        button, .stButton button { min-height: 44px !important; }
+    }
 </style>
 ''', unsafe_allow_html=True)
 
