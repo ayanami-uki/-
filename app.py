@@ -987,7 +987,38 @@ def _render_model_config():
     exa_key = read_env("EXA_API_KEY")
     has_valid_key = llm_key and len(llm_key) > 20 and "your_api_key" not in llm_key.lower()
 
+    # 检测是否运行在 Streamlit Cloud（secrets 中读取到值 = 云端配置）
+    try:
+        import streamlit as st
+        is_cloud = hasattr(st, "secrets") and st.secrets and ("LLM_API_KEY" in st.secrets or "ANTHROPIC_API_KEY" in st.secrets)
+    except Exception:
+        is_cloud = False
+
     with st.expander("⚙️ 模型配置" if has_valid_key else "⚙️ 模型配置（首次使用请点这里）", expanded=not has_valid_key):
+        if is_cloud:
+            st.info("✅ API Key 已通过云端环境变量配置，无需手动填写。队友使用自己编译或本地部署时需自行配置。")
+            provider = st.selectbox(
+                "接口类型",
+                options=["anthropic", "openai"],
+                index=0 if read_env("LLM_PROVIDER", "anthropic") == "anthropic" else 1,
+                format_func=lambda x: "Anthropic 原生" if x == "anthropic" else "OpenAI 兼容",
+                key="cfg_provider_cloud",
+                disabled=True,
+            )
+            base_url = read_env("LLM_BASE_URL", "https://api.anthropic.com/v1")
+            cur_model = read_env("LLM_MODEL", "claude-sonnet-4-6")
+            model_opts = {
+                "anthropic": ["claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5", "claude-sonnet-4-5"],
+                "openai": ["deepseek-chat", "deepseek-reasoner", "gpt-4o", "gpt-4-turbo", "qwen-plus", "qwen-max"],
+            }
+            opts = model_opts.get(read_env("LLM_PROVIDER", "anthropic"), [cur_model])
+            st.selectbox("模型", options=opts, index=0, key="cfg_model_display", disabled=True)
+            st.caption("如需修改配置，请在 Streamlit Cloud Dashboard 的 Secrets 中更新。")
+            s_llm = "✅ 已配置"
+            s_exa = "✅ 已配置" if exa_key else "⚠️ 未配置"
+            st.caption(f"LLM：{s_llm} | Exa：{s_exa}")
+            return
+
         provider = st.selectbox(
             "接口类型",
             options=["anthropic", "openai"],
