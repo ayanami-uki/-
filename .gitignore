@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Project temp
+saves/
+css_block.py
+create_icon.py
+app_new_section.py
+*.ps1
+icon_debate.png
+
+# VS
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
