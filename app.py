@@ -33,13 +33,17 @@ def read_env(key, default=""):
     return default
 
 
-def write_env(key, value):
-    """写入单个环境变量到 .env"""
-    if not os.path.exists(ENV_FILE):
-        with open(ENV_FILE, "w") as f:
-            f.write("# 辩论备赛助手 配置文件\n")
-    set_key(ENV_FILE, key, value)
+def write_env(key, value, persist=True):
+    """写入环境变量（内存中始终设置，文件写入失败时静默跳过）"""
     os.environ[key] = value
+    if persist:
+        try:
+            if not os.path.exists(ENV_FILE):
+                with open(ENV_FILE, "w") as f:
+                    f.write("# 辩论备赛助手 配置文件\n")
+            set_key(ENV_FILE, key, value)
+        except Exception:
+            pass  # 只读文件系统（如Streamlit Cloud）静默跳过
 
 
 # ============================================================
@@ -996,27 +1000,41 @@ def _render_model_config():
 
     with st.expander("⚙️ 模型配置" if has_valid_key else "⚙️ 模型配置（首次使用请点这里）", expanded=not has_valid_key):
         if is_cloud:
-            st.info("✅ API Key 已通过云端环境变量配置，无需手动填写。队友使用自己编译或本地部署时需自行配置。")
+            st.info("本应用不提供 API Key。请使用**你自己的 API Key** 下方填写，仅保存在你的浏览器会话中。")
             provider = st.selectbox(
                 "接口类型",
                 options=["anthropic", "openai"],
                 index=0 if read_env("LLM_PROVIDER", "anthropic") == "anthropic" else 1,
                 format_func=lambda x: "Anthropic 原生" if x == "anthropic" else "OpenAI 兼容",
                 key="cfg_provider_cloud",
-                disabled=True,
             )
-            base_url = read_env("LLM_BASE_URL", "https://api.anthropic.com/v1")
-            cur_model = read_env("LLM_MODEL", "claude-sonnet-4-6")
+            api_key = st.text_input("输入你的 API Key", value="", type="password",
+                                    placeholder="sk-... 填入你自己的 Key", key="cfg_api_key_cloud",
+                                    help="你的 Key 仅保存在本地浏览器会话中，不会上传到服务器。")
+
+            base_url_input = ""
+            if provider == "openai":
+                base_url_input = st.text_input("接口地址", value=read_env("LLM_BASE_URL", "https://api.deepseek.com"),
+                                               key="cfg_base_url_cloud")
+            else:
+                base_url_input = "https://api.anthropic.com/v1"
+
             model_opts = {
                 "anthropic": ["claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5", "claude-sonnet-4-5"],
                 "openai": ["deepseek-chat", "deepseek-reasoner", "gpt-4o", "gpt-4-turbo", "qwen-plus", "qwen-max"],
             }
-            opts = model_opts.get(read_env("LLM_PROVIDER", "anthropic"), [cur_model])
-            st.selectbox("模型", options=opts, index=0, key="cfg_model_display", disabled=True)
-            st.caption("如需修改配置，请在 Streamlit Cloud Dashboard 的 Secrets 中更新。")
-            s_llm = "✅ 已配置"
-            s_exa = "✅ 已配置" if exa_key else "⚠️ 未配置"
-            st.caption(f"LLM：{s_llm} | Exa：{s_exa}")
+            model = st.selectbox("模型", options=model_opts.get(provider, ["claude-sonnet-4-6"]),
+                                 key="cfg_model_cloud")
+
+            if st.button("💾 设置（仅本次会话有效）", use_container_width=True, disabled=not api_key):
+                write_env("LLM_API_KEY", api_key)
+                write_env("LLM_PROVIDER", provider)
+                write_env("LLM_BASE_URL", base_url_input)
+                write_env("LLM_MODEL", model)
+                reset_llm()
+                st.success("已设置！现在可以使用了。Key 仅存于内存中，刷新页面后需重新填入。")
+            s_llm = "✅ 已设置" if has_valid_key else "⚠️ 待配置"
+            st.caption(f"状态：{s_llm}")
             return
 
         provider = st.selectbox(
