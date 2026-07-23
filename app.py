@@ -680,8 +680,12 @@ def save_session():
         "interrogate_history": st.session_state.interrogate_history,
         "evidence_library": st.session_state.evidence_library,
     }
-    with open(_save_path(st.session_state.topic), "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        os.makedirs(SAVE_DIR, exist_ok=True)
+        with open(_save_path(st.session_state.topic), "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass  # 云环境只读文件系统静默跳过，数据在内存中保留
 
 
 def load_session(topic: str):
