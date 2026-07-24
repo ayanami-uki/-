@@ -1027,7 +1027,7 @@ def _render_model_config():
 
         model_opts = {
             "anthropic": ["claude-sonnet-4-6", "claude-opus-4-7", "claude-haiku-4-5", "claude-sonnet-4-5"],
-            "openai": ["deepseek-chat", "deepseek-reasoner", "gpt-4o", "gpt-4-turbo", "qwen-plus", "qwen-max"],
+            "openai": ["deepseek-v4-flash", "deepseek-v4-pro", "deepseek-chat", "deepseek-reasoner", "gpt-4o", "qwen-plus", "qwen-max"],
         }
         opts = model_opts.get(provider, ["claude-sonnet-4-6"])
         cur_model = read_env("LLM_MODEL", "claude-sonnet-4-6")
