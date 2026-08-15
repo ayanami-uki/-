@@ -1538,6 +1538,16 @@ def review_framework():
     """审查立论框架的逻辑一致性，生成优化建议和辩位任务"""
     llm = get_llm()
     framework = st.session_state.arguments
+    custom_blocks = st.session_state.custom_blocks
+
+    # 构建自定义积木的明确说明，要求 LLM 必须保留
+    custom_note = ""
+    if custom_blocks:
+        custom_list = "\n".join(f"- 【{b['category']}】{b['text']}" for b in custom_blocks)
+        custom_note = (
+            f"\n\n【用户手动添加的自定义积木】（这些是用户自己的观点，极其重要，"
+            f"你必须完整保留在优化后的框架中，一条都不能删除或遗漏）：\n{custom_list}"
+        )
 
     # Step 1: 审查框架
     with st.spinner("🔍 正在审查框架逻辑一致性..."):
@@ -1549,11 +1559,16 @@ def review_framework():
 2. 开题思路是否与后续论证方向一致？
 3. 判准和定义是否支持所有选定的论点？
 4. 逻辑链是否能有效串联所有论点？
+5. 用户自定义积木是否与其他积木逻辑衔接顺畅？
 
 如果有矛盾，请明确指出冲突点，给出修改建议，并解释为什么修改后更好。
 如果逻辑一致，请进行完善优化，让表述更精准、论证更紧密。
+
+铁律：用户手动添加的自定义积木必须一字不差地完整保留在"优化后的完整框架"中，
+你可以调整其措辞使其更融入整体，但绝不能删除、合并或遗漏任何一条自定义积木。
+
 最后给出优化后的完整框架。""",
-            f"辩题：{st.session_state.topic}\n持方：{st.session_state.side}\n\n当前立论框架：\n{framework}",
+            f"辩题：{st.session_state.topic}\n持方：{st.session_state.side}\n\n当前立论框架：\n{framework}{custom_note}",
             temperature=0.7)
         st.session_state.framework_review = review
 
@@ -2173,29 +2188,36 @@ def generate_question_to_ask(position: str, direction: str = "") -> str:
 
 
 def simulate_opponent_answer(position: str, question: str) -> str:
-    """AI模拟对方辩手对质询问题的回应"""
+    """AI模拟对方辩手（持反方立场）对质询问题的回应"""
     llm = get_llm()
     framework = st.session_state.arguments
+    my_side = st.session_state.side
+    opp_side = "反方" if my_side == "正方" else "正方"
 
     opponent_roles = {
-        "三辩": "你是对方二辩（申论驳论手）。我方三辩正在质询你的中端论证和例证。你必须正面回应，不能反问。根据你的立场给出回应。",
-        "四辩": "你是对方一辩（立论陈词手）。我方四辩正在质询你的前端定义和判准。你必须坚守你的框架，正面回应，不能反问。",
+        "三辩": "你是对方的二辩（申论驳论手），持【" + opp_side + "】立场。我方三辩正在质询你中端的申论论证和例证。你必须站在" + opp_side + "的立场正面回应，不能反问。",
+        "四辩": "你是对方的一辩（立论陈词手），持【" + opp_side + "】立场。我方四辩正在质询你前端的定义和判准。你必须站在" + opp_side + "的立场坚守并正面回应，不能反问。",
     }
 
     prompt = f"""你正在模拟新国辩赛制中被质询的对方辩手。
 
 辩题：{st.session_state.topic}
-对方（我方的对手）持方：{'反方' if st.session_state.side == '正方' else '正方'}
-对方立论框架（你需要从对方角度防守）：
+你的立场（你是对手）：{opp_side}
+提问方立场（质询你的人）：{my_side}
+
+【我方（提问方）的立论框架——你作为对手必须反驳和防守它】
 {framework[:2000]}
+
+注意：上面的框架是【提问方（" + my_side + "方）】的立论，不是你的框架！
+你要以 {opp_side} 方的身份回应，用 {opp_side} 方的逻辑、定义和论点来应对，绝不能站在 {my_side} 方的立场说话。
 
 我方质询问题：{question}
 
 {opponent_roles.get(position, opponent_roles['三辩'])}
 
-请给出对方的回应（30-80字）。必须正面回应，不能反问。直接输出回应文本。"""
+请以 {opp_side} 方辩手的身份给出回应（30-80字）。必须正面回应，不能反问。直接输出回应文本。"""
 
-    return llm.ask("你是被质询的对方辩手。正面回应质询问题。", prompt, temperature=0.8)
+    return llm.ask(f"你是{opp_side}方辩手，正在被{my_side}方质询。用{opp_side}方的立场正面回应。", prompt, temperature=0.8)
 
 
 def evaluate_question_quality(position: str, question: str, response: str) -> str:
